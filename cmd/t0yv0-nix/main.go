@@ -15,6 +15,7 @@ import (
 
 type command struct {
 	name    string
+	short   string
 	flagSet func() *flag.FlagSet
 	exec    func(*flag.FlagSet) error
 }
@@ -22,10 +23,11 @@ type command struct {
 func main() {
 	allCommands := []command{
 		profileListCmd(),
+		updateAllCmd(),
 	}
 	if len(os.Args) >= 2 {
 		for _, cmd := range allCommands {
-			if cmd.name == os.Args[1] {
+			if cmd.name == os.Args[1] || cmd.short == os.Args[1] {
 				fs := cmd.flagSet()
 				if err := fs.Parse(os.Args[2:]); err != nil {
 					log.Fatal(err)
@@ -37,18 +39,50 @@ func main() {
 			}
 		}
 	}
-	var cmdNames []string
-	for _, cmd := range allCommands {
-		cmdNames = append(cmdNames, cmd.name)
-	}
-	fmt.Printf("expected %s subcommands\n", strings.Join(cmdNames, ", "))
+
+	usage(allCommands)
 	os.Exit(1)
+}
+
+func usage(cmds []command) {
+	fmt.Printf("t0yv0-nix: unrecognized command. usage:\n")
+
+	w := tabwriter.NewWriter(os.Stdout, 1, 1, 1, ' ', 0)
+	defer w.Flush()
+
+	for _, cmd := range cmds {
+		fmt.Fprintf(w, "t0yv0-nix\t%s\n", cmd.name)
+		fmt.Fprintf(w, "t0yv0-nix\t%s\n", cmd.short)
+	}
+}
+
+func updateAllCmd() command {
+	name := "upgrade-all"
+	return command{
+		name:  name,
+		short: "ua",
+		flagSet: func() *flag.FlagSet {
+			fs := flag.NewFlagSet(name, flag.ExitOnError)
+			return fs
+		},
+		exec: func(*flag.FlagSet) error {
+			return upgradeAll()
+		},
+	}
+}
+
+func upgradeAll() error {
+	cmd := exec.Command("nix", "profile", "upgrade", ".*")
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	return cmd.Run()
 }
 
 func profileListCmd() command {
 	name := "profile-list"
 	return command{
-		name: name,
+		name:  name,
+		short: "pl",
 		flagSet: func() *flag.FlagSet {
 			fs := flag.NewFlagSet(name, flag.ExitOnError)
 			return fs
