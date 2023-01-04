@@ -113,6 +113,9 @@ func profileList() error {
 			rev = u.Query().Get("rev")
 			if rev != "" {
 				rev = rev[0:12]
+			} else if u.Scheme == "github" {
+				p := strings.Split(u.Opaque, "/")
+				rev = p[len(p)-1][0:12]
 			}
 		}
 
